@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel=icon href=pizetalogo2.png>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>π-ζ 게시판</title>
+    <style>
+
+    #nitwit {
+        position: absolute;
+        top: 10px; /* 게시판 위에 위치하도록 조정 */
+        right: 190px;
+        width: 70px; /* 이미지 크기 조절 */
+        height: auto;
+        z-index: 100; /* 게시판보다 앞에 위치 */
+    }
+
+    @media (max-width: 600px) {
+        #nitwit {
+            top: 7px; /* 모바일에서 더 작은 위치 조정 */
+            right: 20px; /* 오른쪽에서 간격 조정 */
+            width: 50px; /* 모바일 화면에서는 더 작은 크기 */
+        }
+    }	    
+
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+
+        #message-board {
+            width: 100%;
+            max-width: 600px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            background-color: #ffffff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            z-index: 1;
+        }
+
+        h1 {
+            text-align: center;
+            padding: 10px;
+            margin: 0;
+            background-color: #3b5998;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        #messages-list {
+            flex-grow: 1;
+            padding: 10px;
+            overflow-y: auto;
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        #messages-list li {
+            background-color: #f1f1f1;
+            margin: 5px 0;
+            padding: 10px;
+            border-radius: 15px;
+            max-width: 80%;
+            word-wrap: break-word;
+            position: relative;
+        }
+
+        #messages-list li.sent {
+            background-color: var(--my-background-color, #dcf8c6);
+            margin-left: auto;
+        }
+
+        #messages-list li.received {
+            background-color: var(--their-background-color, #BAF8F1);
+            margin-right: auto;
+        }
+
+        #messages-list li .delete-btn {
+            background-color: transparent;
+            border: none;
+            color: lightgray;
+            cursor: pointer;
+            font-size: 0.6rem;
+            font-weight: bold;
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .timestamp, .ip-info {
+            font-size: 0.7rem;
+            color: black;
+            display: block;
+        }
+
+        .ip-info {
+            color: gray;
+        }
+
+        input, button {
+            border: none;
+            padding: 10px;
+            font-size: 1rem;
+            border-radius: 20px;
+        }
+
+        input#username {
+            width: 20%;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+        }
+
+        input#message {
+            width: calc(100% - 120px);
+            margin-right: 10px;
+            border: 1px solid #ddd;
+        }
+
+        button {
+            background-color: #3b5998;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #2d4373;
+        }
+
+        #input-area {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #ddd;
+            background-color: #f9f9f9;
+        }
+
+        #custom-bar {
+            width: 80px;
+            padding: 10px;
+            background-color: #eaeaea;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100%;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            z-index: 10;
+        }
+
+        #custom-bar.visible {
+            transform: translateX(0);
+        }
+
+        #custom-bar input[type="color"] {
+            width: 40px;
+            height: 40px;
+            border: none;
+            cursor: pointer;
+        }
+
+        #custom-bar input[type="range"] {
+            width: 60px;
+        }
+
+        #toggle-sidebar-btn {
+            position: fixed;
+            top: 10px;
+            left: 20px;
+            z-index: 100;
+            background-color: #3b5998;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        input:focus {
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+    <button id="toggle-sidebar-btn">Show Sidebar</button>
+
+    <div id="custom-bar">
+        <label>글씨 크기</label>
+        <input id="font-size-control" type="range" min="10" max="30" value="16">
+        
+        <label>글씨 색상</label>
+        <input id="font-color-control" type="color" value="#000000">
+        
+        <label>굵게</label>
+        <button id="bold-toggle">Bold</button>
+        
+        <label>내 배경</label>
+        <input id="my-background-color-control" type="color" value="#dcf8c6">
+        
+        <label>상대 배경</label>
+        <input id="their-background-color-control" type="color" value="#ffffff">
+    </div>
+
+<img src="nitwit.png" id="nitwit" alt="nitwit">
+
+<script>
+        const img = document.getElementById("nitwit");
+        const sounds = [
+            {file: 'refuse.ogg', probability: 0.7}, 
+            {file: 'refuse2.ogg', probability: 0.3},
+	{file: 'hurt.mp3'}
+        ];
+	
+        img.addEventListener("click", function() { 
+            img.src = "refusing.webp"; 
+            
+            const random = Math.random();
+            let cumulativeProbability = 0;
+
+
+            for (let i = 0; i < sounds.length; i++) {
+                cumulativeProbability += sounds[i].probability;
+                if (random < cumulativeProbability) {
+                    const audio = new Audio(sounds[i].file);
+                    audio.play();
+                    break;
+                }
+            }
+            setTimeout(function() {
+                img.src = "nitwit.png";
+            }, 1560);
+
+        });
+
+	img.addEventListener("contextmenu", function(event) {
+	event.preventDefault();  
+	const audio=new Audio(sounds[2].file);
+	audio.play();
+	});
+    </script>
+
+
+    <div id="message-board">
+        <h1><a href="https://qcwe8yru2.github.io/Oiposts/">π</a>-ζ</h1>
+        <ul id="messages-list"></ul>
+
+        <div id="input-area">
+            <input type="text" id="username" placeholder="이름 입력">
+            <input type="text" id="message" placeholder="메시지 입력">
+            <button id="sendBtn">전송</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+        import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDb7xwJY_RzxESIXN8GdcBpX3F2gglclX8",
+            authDomain: "pi-zeta.firebaseapp.com",
+            databaseURL: "https://pi-zeta-default-rtdb.firebaseio.com",
+            projectId: "pi-zeta",
+            storageBucket: "pi-zeta.appspot.com",
+            messagingSenderId: "1048639958496",
+            appId: "1:1048639958496:web:7739a25dc04ed833be8f85",
+            measurementId: "G-LW0YQPC6L0"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        // 사이드바 토글
+        const toggleSidebarBtn = document.getElementById('toggle-sidebar-btn');
+        const customBar = document.getElementById('custom-bar');
+
+        toggleSidebarBtn.addEventListener('click', () => {
+            customBar.classList.toggle('visible');
+            toggleSidebarBtn.textContent = customBar.classList.contains('visible') ? 'Hide Sidebar' : 'Show Sidebar';
+        });
+
+        async function getUserIPAndLocation() {
+            try {
+                const response = await fetch("https://ipapi.co/json/");
+                const data = await response.json();
+                const ip = data.ip || "000000";
+                const country = data.country_name || '';
+                const city = data.city || '';
+                const region = data.region || '';
+                const latitude = data.latitude || '';
+                const longitude = data.longitude || '';
+                const locationInfo = `${country}, ${city}, ${region}, 위도: ${latitude}, 경도: ${longitude}`;
+                return { ip, locationInfo };
+            } catch (error) {
+                console.error('IP 및 위치 정보 가져오기 실패:', error);
+                return { ip: '000000', locationInfo: '' };
+            }
+        }
+
+        async function sendMessage() {
+            const username = document.getElementById('username').value;
+            const message = document.getElementById('message').value;
+            const { ip, locationInfo } = await getUserIPAndLocation();
+
+            if (username && message) {
+                const timestamp = new Date().toLocaleString('ko-KR', {
+                    year: 'numeric', month: 'numeric', day: 'numeric',
+                    hour: 'numeric', minute: 'numeric', second: 'numeric',
+                    hour12: true
+                });
+
+                const messagesRef = ref(database, 'messages');
+                push(messagesRef, {
+                    username: username,
+                    message: message,
+                    timestamp: timestamp,
+                    ip: ip,
+                    locationInfo: locationInfo
+                });
+
+                document.getElementById('message').value = '';
+                scrollToBottom();
+
+                document.getElementById('message').focus();
+            } else {
+                alert('이름과 메시지를 모두 입력하세요!');
+            }
+        }
+
+        function deleteMessage(key) {
+            const confirmation = prompt("메시지를 삭제하려면 Key를 입력하세요.");
+            if (confirmation === '309') {
+                const messageRef = ref(database, `messages/${key}`);
+                remove(messageRef);
+                alert('메시지가 삭제되었습니다.');
+            } else {
+                alert('잘못된 코드입니다. 삭제가 취소되었습니다.');
+            }
+        }
+
+        function scrollToBottom() {
+            const messagesList = document.getElementById('messages-list');
+            messagesList.scrollTop = messagesList.scrollHeight;
+        }
+
+        document.getElementById('sendBtn').addEventListener('click', sendMessage);
+
+        document.getElementById('message').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        const messagesRef = ref(database, 'messages');
+        onValue(messagesRef, (snapshot) => {
+            const messagesList = document.getElementById('messages-list');
+            messagesList.innerHTML = '';
+
+            snapshot.forEach((childSnapshot) => {
+                const childData = childSnapshot.val();
+                const key = childSnapshot.key;
+
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span class="timestamp">[${childData.timestamp}]</span> 
+                    ${childData.username}: ${childData.message}
+                    <span class="ip-info">IP: ${childData.ip} (${childData.locationInfo})</span>
+                `;
+
+                if (childData.username === document.getElementById('username').value) {
+                    li.classList.add('sent');
+                } else {
+                    li.classList.add('received');
+                }
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'x';
+                deleteBtn.classList.add('delete-btn');
+                deleteBtn.addEventListener('click', () => deleteMessage(key));
+
+                li.appendChild(deleteBtn);
+                messagesList.appendChild(li);
+            });
+
+            scrollToBottom();
+        });
+
+        // 스타일 적용
+        const fontSizeControl = document.getElementById('font-size-control');
+        const fontColorControl = document.getElementById('font-color-control');
+        const boldToggle = document.getElementById('bold-toggle');
+        const myBackgroundColorControl = document.getElementById('my-background-color-control');
+        const theirBackgroundColorControl = document.getElementById('their-background-color-control');
+        let isBold = false;
+
+        fontSizeControl.addEventListener('input', () => {
+            document.getElementById('messages-list').style.fontSize = `${fontSizeControl.value}px`;
+        });
+
+        fontColorControl.addEventListener('input', () => {
+            document.getElementById('messages-list').style.color = fontColorControl.value;
+        });
+
+        boldToggle.addEventListener('click', () => {
+            isBold = !isBold;
+            document.getElementById('messages-list').style.fontWeight = isBold ? 'bold' : 'normal';
+        });
+
+        myBackgroundColorControl.addEventListener('input', () => {
+            document.documentElement.style.setProperty('--my-background-color', myBackgroundColorControl.value);
+        });
+
+        theirBackgroundColorControl.addEventListener('input', () => {
+            document.documentElement.style.setProperty('--their-background-color', theirBackgroundColorControl.value);
+        });
+    </script>
+</body>
+</html>
